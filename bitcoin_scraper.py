@@ -13,7 +13,7 @@ from selenium.webdriver.support import expected_conditions as EC
 
 # Set up Selenium options
 options = Options()
-#options.add_argument("--headless")  # Enable headless mode for GitHub Actions
+options.add_argument("--headless")  # Enable headless mode for GitHub Actions
 options.add_argument("--disable-gpu")
 options.add_argument("--window-size=1920,1080")
 

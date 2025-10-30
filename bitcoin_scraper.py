@@ -11,115 +11,109 @@ from fake_useragent import UserAgent
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-# Set up Selenium options
-options = Options()
-options.add_argument("--headless")  # Enable headless mode for GitHub Actions
-options.add_argument("--disable-gpu")
-options.add_argument("--window-size=1920,1080")
+def initialize_driver():
+    """Initialize Chrome WebDriver with stable configuration."""
+    options = Options()
+    options.add_argument("--headless")  # Enable headless mode for GitHub Actions
+    options.add_argument("--disable-gpu")
+    options.add_argument("--window-size=1920,1080")
 
-# Rotate User-Agent to prevent detection
-ua = UserAgent()
-options.add_argument(f"user-agent={ua.random}")
+    # Rotate User-Agent to prevent detection
+    ua = UserAgent()
+    options.add_argument(f"user-agent={ua.random}")
 
-# Set up ChromeDriver using webdriver_manager
-driver = webdriver.Chrome(options=options)
+    # Set up ChromeDriver using webdriver_manager
+    driver = webdriver.Chrome(options=options)
+    return driver
 
-# Define the target website (CoinMarketCap Bitcoin page)
-URL = "https://coinmarketcap.com/currencies/bitcoin/"
 
-def scrape_bitcoin_data():
+def scrape_bitcoin_data(driver):
     """Scrape Bitcoin details from CoinMarketCap."""
+    URL = "https://coinmarketcap.com/currencies/bitcoin/"
     driver.get(URL)
 
-    # Wait until the main price element loads (replaces static sleep)
+    # Wait for the key element to confirm page load
     WebDriverWait(driver, 20).until(
         EC.presence_of_element_located((By.CSS_SELECTOR, 'span[data-test="text-cdp-price-display"]'))
     )
 
-    try:
-        # Extract Bitcoin Price
-        price = driver.find_element(By.CSS_SELECTOR, 'span[data-test="text-cdp-price-display"]').text
+    # Extract Bitcoin Price
+    price = driver.find_element(By.CSS_SELECTOR, 'span[data-test="text-cdp-price-display"]').text
 
-        # Extract Market Cap
-        market_cap = driver.find_element(
-            By.XPATH, "//div[contains(text(),'Market cap')]/ancestor::dt/following-sibling::dd//span"
-        ).text
+    # Extract Market Cap
+    market_cap = driver.find_element(
+        By.XPATH, "//div[contains(text(),'Market cap')]/ancestor::dt/following-sibling::dd//span"
+    ).text
 
-        # Extract 24h Trading Volume
-        volume_24h = driver.find_element(
-            By.XPATH, "//div[contains(text(),'Volume (24h')]/ancestor::dt/following-sibling::dd//span"
-        ).text
+    # Extract 24h Trading Volume
+    volume_24h = driver.find_element(
+        By.XPATH, "//div[contains(text(),'Volume (24h')]/ancestor::dt/following-sibling::dd//span"
+    ).text
 
-        # Extract Circulating Supply
-        circulating_supply = driver.find_element(
-            By.XPATH, "//div[contains(text(),'Circulating supply')]/ancestor::dt/following-sibling::dd//span"
-        ).text
+    # Extract Circulating Supply
+    circulating_supply = driver.find_element(
+        By.XPATH, "//div[contains(text(),'Circulating supply')]/ancestor::dt/following-sibling::dd//span"
+    ).text
 
-        # Extract 24h Price Change
-        price_change_24h = driver.find_element(
-            By.CSS_SELECTOR, "p[class*='change-text']"
-        ).text
+    # Extract 24h Price Change
+    price_change_24h = driver.find_element(
+        By.CSS_SELECTOR, "p[class*='change-text']"
+    ).text
 
-        # Extract Community Sentiment
-        bullish_sentiment_elems = driver.find_elements(
-            By.CSS_SELECTOR, "span.sc-65e7f566-0.cOjBdO.ratio"
-        )
-        bearish_sentiment_elems = driver.find_elements(
-            By.CSS_SELECTOR, "span.sc-65e7f566-0.iKkbth.ratio"
-        )
+    # Extract Community Sentiment
+    bullish_sentiment_elems = driver.find_elements(
+        By.CSS_SELECTOR, "span.sc-65e7f566-0.cOjBdO.ratio"
+    )
+    bearish_sentiment_elems = driver.find_elements(
+        By.CSS_SELECTOR, "span.sc-65e7f566-0.iKkbth.ratio"
+    )
 
-        bullish = bullish_sentiment_elems[0].text if bullish_sentiment_elems else "N/A"
-        bearish = bearish_sentiment_elems[0].text if bearish_sentiment_elems else "N/A"
+    bullish = bullish_sentiment_elems[0].text if bullish_sentiment_elems else "N/A"
+    bearish = bearish_sentiment_elems[0].text if bearish_sentiment_elems else "N/A"
 
-        # Capture timestamp
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    # Capture timestamp
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        # Store the data in a dictionary
-        bitcoin_data = {
-            "timestamp": timestamp,
-            "price": price,
-            "market_cap": market_cap,
-            "volume_24h": volume_24h,
-            "circulating_supply": circulating_supply,
-            "price_change_24h": price_change_24h,
-            "bullish_sentiment": bullish,
-            "bearish_sentiment": bearish
-        }
+    # Store the data in a dictionary
+    bitcoin_data = {
+        "timestamp": timestamp,
+        "price": price,
+        "market_cap": market_cap,
+        "volume_24h": volume_24h,
+        "circulating_supply": circulating_supply,
+        "price_change_24h": price_change_24h,
+        "bullish_sentiment": bullish,
+        "bearish_sentiment": bearish
+    }
 
-        return bitcoin_data
+    return bitcoin_data
 
-    except Exception as e:
-        print("Error occurred:", e)
-        return None
 
-def save_to_csv(data):
+def save_to_csv(data, file_name="bitcoin_hourly_data.csv"):
     """Save scraped data to CSV."""
-    file_name = "bitcoin_hourly_data.csv"
     try:
         df = pd.read_csv(file_name)
     except FileNotFoundError:
         df = pd.DataFrame(columns=[
             "timestamp", "price", "market_cap", "volume_24h",
-            "circulating_supply", "price_change_24h", "bullish_sentiment", "bearish_sentiment"
+            "circulating_supply", "price_change_24h",
+            "bullish_sentiment", "bearish_sentiment"
         ])
 
-    # Create a DataFrame for the new data row
-    new_row = pd.DataFrame([data])
-
-    # Concatenate the new row to the existing DataFrame
-    df = pd.concat([df, new_row], ignore_index=True)
-
-    # Save back to CSV
+    df = pd.concat([df, pd.DataFrame([data])], ignore_index=True)
     df.to_csv(file_name, index=False)
+
 
 if __name__ == "__main__":
     print("Scraping Bitcoin Data...")
-    scraped_data = scrape_bitcoin_data()
+    driver = initialize_driver()
 
-    if scraped_data:
-        save_to_csv(scraped_data)
-        print("Data saved to bitcoin_hourly_data.csv")
-    else:
-        print("Failed to scrape data.")
-
-    driver.quit()
+    try:
+        scraped_data = scrape_bitcoin_data(driver)
+        if scraped_data:
+            save_to_csv(scraped_data)
+            print("✅ Data saved to bitcoin_hourly_data.csv")
+        else:
+            print("❌ Failed to scrape data.")
+    finally:
+        driver.quit()

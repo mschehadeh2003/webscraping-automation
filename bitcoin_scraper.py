@@ -11,7 +11,7 @@ from fake_useragent import UserAgent
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-def initialize_driver():
+def initializing_driver():
     """Initialize Chrome WebDriver with stable configuration."""
     options = Options()
     options.add_argument("--headless")  # Headless for GitHub Actions
@@ -106,7 +106,7 @@ def save_to_csv(data, file_name="bitcoin_hourly_data.csv"):
 
 if __name__ == "__main__":
     print("Scraping Bitcoin Data...")
-    driver = initialize_driver()
+    driver = initializing_driver()
 
     try:
         scraped_data = scrape_bitcoin_data(driver)

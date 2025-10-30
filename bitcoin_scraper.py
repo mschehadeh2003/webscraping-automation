@@ -14,16 +14,16 @@ from selenium.webdriver.support import expected_conditions as EC
 def initialize_driver():
     """Initialize Chrome WebDriver with stable configuration."""
     options = Options()
-    options.add_argument("--headless")  # Enable headless mode for GitHub Actions
+    options.add_argument("--headless")  # Headless for GitHub Actions
     options.add_argument("--disable-gpu")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--window-size=1920,1080")
 
-    # Rotate User-Agent to prevent detection
     ua = UserAgent()
     options.add_argument(f"user-agent={ua.random}")
 
-    # Set up ChromeDriver using webdriver_manager
-    driver = webdriver.Chrome(options=options)
+    driver = webdriver.Chrome(ChromeDriverManager().install(), options=options)
     return driver
 
 
